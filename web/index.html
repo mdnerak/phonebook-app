@@ -1,0 +1,973 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0"
+  >
+
+  <meta
+    name="description"
+    content="Phonebook Contact Manager"
+  >
+
+  <meta
+    name="theme-color"
+    content="#111827"
+  >
+
+  <title>Phonebook | Contact Manager</title>
+
+  <link
+    rel="stylesheet"
+    href="/style.css"
+  >
+</head>
+
+<body>
+
+  <!-- SIDEBAR TOGGLE -->
+  <button
+    class="sidebar-toggle"
+    id="sidebarToggle"
+    type="button"
+    aria-label="Toggle sidebar"
+    aria-expanded="true"
+    title="Close sidebar"
+  >
+    <span></span>
+    <span></span>
+    <span></span>
+  </button>
+
+
+  <!-- APPLICATION -->
+  <div class="app">
+
+    <!-- SIDEBAR -->
+    <aside
+      class="sidebar"
+      aria-label="Main navigation"
+    >
+
+      <!-- BRAND -->
+      <div class="brand">
+
+        <div
+          class="brand-icon"
+          aria-hidden="true"
+        >
+          P
+        </div>
+
+        <div>
+          <h1>Phonebook</h1>
+
+          <span>
+            Contact Manager
+          </span>
+        </div>
+
+      </div>
+
+
+      <!-- NAVIGATION -->
+      <nav>
+
+        <!-- CONTACTS -->
+        <button
+          class="nav-item active"
+          id="contactsNav"
+          type="button"
+          title="View all contacts"
+        >
+          <span aria-hidden="true">⌂</span>
+
+          <span>
+            Contacts
+          </span>
+        </button>
+
+
+        <!-- FAVORITES -->
+        <button
+          class="nav-item"
+          id="favoriteNav"
+          type="button"
+          title="View favorite contacts"
+        >
+          <span aria-hidden="true">★</span>
+
+          <span>
+            Favorites
+          </span>
+
+          <span
+            class="favorite-badge"
+            id="favoriteNavCount"
+            aria-label="Favorite contacts"
+          >
+            0
+          </span>
+        </button>
+
+
+        <!-- ADD CONTACT -->
+        <button
+          class="nav-item"
+          id="addNav"
+          type="button"
+          title="Add a new contact"
+        >
+          <span aria-hidden="true">＋</span>
+
+          <span>
+            Add Contact
+          </span>
+        </button>
+
+
+        <div
+          class="sidebar-divider"
+          aria-hidden="true"
+        ></div>
+
+
+        <!-- SEARCH -->
+        <button
+          class="nav-item"
+          id="searchNav"
+          type="button"
+          title="Search contacts"
+        >
+          <span aria-hidden="true">⌕</span>
+
+          <span>
+            Search Contacts
+          </span>
+        </button>
+
+
+        <!-- SORT -->
+        <button
+          class="nav-item"
+          id="sortNav"
+          type="button"
+          title="Sort contacts alphabetically"
+        >
+          <span aria-hidden="true">↕</span>
+
+          <span>
+            Sort A → Z
+          </span>
+        </button>
+
+
+        <!-- STATISTICS -->
+        <button
+          class="nav-item"
+          id="statsNav"
+          type="button"
+          title="View statistics"
+        >
+          <span aria-hidden="true">▦</span>
+
+          <span>
+            Statistics
+          </span>
+        </button>
+
+      </nav>
+
+
+      <!-- SIDEBAR BOTTOM -->
+      <div class="sidebar-bottom">
+
+        <div class="algorithm-card">
+
+          <div class="algorithm-title">
+            <span aria-hidden="true">⚡</span>
+            Smart Search
+          </div>
+
+          <p>
+            Contacts are sorted by name
+            and searched efficiently.
+          </p>
+
+          <div class="complexity">
+            Binary Search: O(log n)
+          </div>
+
+        </div>
+
+      </div>
+
+    </aside>
+
+
+    <!-- MAIN CONTENT -->
+    <main class="main">
+
+      <!-- TOP BAR -->
+      <header class="topbar">
+
+        <!-- PAGE TITLE -->
+        <div class="page-title">
+
+          <h2>
+            My Contacts
+          </h2>
+
+        </div>
+
+
+        <!-- TOP ACTIONS -->
+        <div class="top-actions">
+
+          <!-- SEARCH -->
+          <div
+            class="search-box"
+            role="search"
+          >
+
+            <span aria-hidden="true">
+              ⌕
+            </span>
+
+            <input
+              type="search"
+              id="searchInput"
+              placeholder="Search contacts..."
+              autocomplete="off"
+              aria-label="Search contacts"
+            >
+
+          </div>
+
+
+          <!-- THEME CONTROLS -->
+          <div class="theme-controls">
+
+            <button
+              type="button"
+              class="theme-button"
+              id="themeButton"
+              title="Switch to dark mode"
+            >
+              ☾ Dark
+            </button>
+
+
+            <select
+              class="background-select"
+              id="backgroundSelect"
+              title="Change background"
+              aria-label="Choose background"
+            >
+              <option value="default">
+                Default
+              </option>
+
+              <option value="lavender">
+                Lavender
+              </option>
+
+              <option value="blue">
+                Soft Blue
+              </option>
+
+              <option value="mint">
+                Mint
+              </option>
+
+              <option value="slate">
+                Slate
+              </option>
+            </select>
+
+          </div>
+
+
+          <!-- ADD CONTACT -->
+          <button
+            class="add-button"
+            id="addButton"
+            type="button"
+            title="Add a new contact"
+          >
+            <span aria-hidden="true">
+              ＋
+            </span>
+
+            <span>
+              Add Contact
+            </span>
+          </button>
+
+        </div>
+
+      </header>
+
+
+      <!-- STATISTICS -->
+      <section
+        class="stats"
+        aria-label="Phonebook statistics"
+      >
+
+        <!-- TOTAL CONTACTS -->
+        <div
+          class="stat-card"
+          id="totalContactsCard"
+          role="button"
+          tabindex="0"
+          title="View all contacts"
+        >
+
+          <div
+            class="stat-icon blue"
+            aria-hidden="true"
+          >
+            👥
+          </div>
+
+          <div>
+
+            <span>
+              Total Contacts
+            </span>
+
+            <strong id="totalContacts">
+              0
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- FAVORITES -->
+        <div
+          class="stat-card"
+          id="favoriteContactsCard"
+          role="button"
+          tabindex="0"
+          title="View favorite contacts"
+        >
+
+          <div
+            class="stat-icon gold"
+            aria-hidden="true"
+          >
+            ★
+          </div>
+
+          <div>
+
+            <span>
+              Favorites
+            </span>
+
+            <strong id="favoriteContactsCount">
+              0
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- STATUS -->
+        <div class="stat-card">
+
+          <div
+            class="stat-icon green"
+            aria-hidden="true"
+          >
+            ✓
+          </div>
+
+          <div>
+
+            <span>
+              Phonebook Status
+            </span>
+
+            <strong>
+              Active
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- SEARCH METHOD -->
+        <div class="stat-card">
+
+          <div
+            class="stat-icon purple"
+            aria-hidden="true"
+          >
+            ↕
+          </div>
+
+          <div>
+
+            <span>
+              Search Method
+            </span>
+
+            <strong>
+              Binary
+            </strong>
+
+          </div>
+
+        </div>
+
+      </section>
+
+
+      <!-- CONTACT SECTION -->
+      <section
+        class="contacts-section"
+        aria-labelledby="contactsHeading"
+      >
+
+        <!-- SECTION HEADER -->
+        <div class="section-header">
+
+          <div>
+
+            <h3 id="contactsHeading">
+              All Contacts
+            </h3>
+
+            <p id="resultText">
+              Your saved contacts
+            </p>
+
+          </div>
+
+
+          <!-- SORT BUTTON -->
+          <button
+            class="sort-button"
+            id="sortButton"
+            type="button"
+            title="Sort contacts A to Z"
+          >
+            A → Z
+          </button>
+
+        </div>
+
+
+        <!-- LOADING -->
+        <div
+          class="loading"
+          id="loading"
+          role="status"
+          aria-live="polite"
+        >
+
+          <div
+            class="spinner"
+            aria-hidden="true"
+          ></div>
+
+          Loading contacts...
+
+        </div>
+
+
+        <!-- EMPTY STATE -->
+        <div
+          class="empty"
+          id="emptyState"
+          style="display: none;"
+        >
+
+          <div
+            class="empty-icon"
+            aria-hidden="true"
+          >
+            👤
+          </div>
+
+          <h3>
+            No contacts found
+          </h3>
+
+          <p>
+            Add your first contact
+            to get started.
+          </p>
+
+          <button
+            class="add-button"
+            id="emptyAddButton"
+            type="button"
+          >
+            <span aria-hidden="true">
+              ＋
+            </span>
+
+            <span>
+              Add Contact
+            </span>
+          </button>
+
+        </div>
+
+
+        <!-- CONTACT GRID -->
+        <div
+          class="contact-grid"
+          id="contactGrid"
+          aria-live="polite"
+        ></div>
+
+      </section>
+
+    </main>
+
+  </div>
+
+
+  <!-- ADD / EDIT MODAL -->
+  <div
+    class="modal-overlay"
+    id="modalOverlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="modalTitle"
+  >
+
+    <div class="modal">
+
+      <button
+        class="close-button"
+        id="closeModal"
+        type="button"
+        aria-label="Close contact form"
+        title="Close"
+      >
+        ×
+      </button>
+
+
+      <div class="modal-header">
+
+        <div
+          class="modal-icon"
+          aria-hidden="true"
+        >
+          👤
+        </div>
+
+        <div>
+
+          <h2 id="modalTitle">
+            Add Contact
+          </h2>
+
+          <p>
+            Enter contact information below.
+          </p>
+
+        </div>
+
+      </div>
+
+
+      <form
+        id="contactForm"
+        novalidate
+      >
+
+        <input
+          type="hidden"
+          id="oldPhone"
+        >
+
+
+        <!-- NAME -->
+        <div class="form-group">
+
+          <label for="name">
+            Full Name
+          </label>
+
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="e.g. Rahim Ahmed"
+            autocomplete="name"
+            maxlength="100"
+            required
+          >
+
+        </div>
+
+
+        <!-- PHONE -->
+        <div class="form-group">
+
+          <label for="phone">
+            Phone Number
+          </label>
+
+          <input
+            type="tel"
+            id="phone"
+            name="phone"
+            placeholder="e.g. 01712345678"
+            autocomplete="tel"
+            maxlength="30"
+            required
+          >
+
+        </div>
+
+
+        <!-- EMAIL -->
+        <div class="form-group">
+
+          <label for="email">
+            Email Address
+          </label>
+
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="e.g. rahim@email.com"
+            autocomplete="email"
+            maxlength="150"
+          >
+
+        </div>
+
+
+        <!-- PROFILE PHOTO -->
+        <div class="form-group photo-form-group">
+
+          <label for="photoInput">
+            Profile Photo
+          </label>
+
+          <div class="photo-upload">
+
+            <div
+              class="photo-preview"
+              id="photoPreview"
+              aria-label="Photo preview"
+            ></div>
+
+
+            <div class="photo-upload-content">
+
+              <label
+                for="photoInput"
+                class="photo-select-button"
+              >
+                Choose Photo
+              </label>
+
+              <input
+                type="file"
+                id="photoInput"
+                name="photo"
+                accept="image/png,image/jpeg,image/webp"
+                hidden
+              >
+
+              <span>
+                JPG, PNG or WEBP
+              </span>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- FORM MESSAGE -->
+        <div
+          class="form-message"
+          id="formMessage"
+          role="alert"
+          aria-live="polite"
+        ></div>
+
+
+        <!-- FORM BUTTONS -->
+        <div class="form-actions">
+
+          <button
+            type="button"
+            class="cancel-button"
+            id="cancelButton"
+          >
+            Cancel
+          </button>
+
+          <button
+            type="submit"
+            class="save-button"
+            id="saveButton"
+          >
+            Save Contact
+          </button>
+
+        </div>
+
+      </form>
+
+    </div>
+
+  </div>
+
+
+  <!-- DELETE MODAL -->
+  <div
+    class="modal-overlay"
+    id="deleteOverlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="deleteTitle"
+  >
+
+    <div class="delete-modal">
+
+      <div
+        class="delete-icon"
+        aria-hidden="true"
+      >
+        !
+      </div>
+
+      <h2 id="deleteTitle">
+        Delete Contact?
+      </h2>
+
+      <p id="deleteText">
+        Are you sure you want to delete
+        this contact?
+      </p>
+
+      <div class="form-actions">
+
+        <button
+          class="cancel-button"
+          id="cancelDelete"
+          type="button"
+        >
+          Cancel
+        </button>
+
+        <button
+          class="delete-confirm"
+          id="confirmDelete"
+          type="button"
+        >
+          Delete
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!-- TOAST -->
+  <div
+    class="toast"
+    id="toast"
+    role="status"
+    aria-live="polite"
+  >
+
+    <span
+      id="toastIcon"
+      aria-hidden="true"
+    >
+      ✓
+    </span>
+
+    <span id="toastMessage"></span>
+
+  </div>
+
+
+  <!-- CONTACT DETAILS MODAL -->
+  <div
+    class="modal-overlay"
+    id="detailsOverlay"
+    role="dialog"
+    aria-modal="true"
+    aria-labelledby="detailsName"
+  >
+
+    <div class="details-modal">
+
+      <button
+        class="close-button"
+        id="closeDetails"
+        type="button"
+        aria-label="Close contact details"
+        title="Close"
+      >
+        ×
+      </button>
+
+
+      <div
+        class="details-photo"
+        id="detailsPhoto"
+      >
+        👤
+      </div>
+
+
+      <h2 id="detailsName">
+        Contact Name
+      </h2>
+
+
+      <p class="details-label">
+        Contact Information
+      </p>
+
+
+      <div class="details-info">
+
+        <!-- PHONE -->
+        <div class="details-row">
+
+          <span aria-hidden="true">
+            ☎
+          </span>
+
+          <div>
+
+            <small>
+              Phone
+            </small>
+
+            <strong id="detailsPhone">
+              -
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- EMAIL -->
+        <div class="details-row">
+
+          <span aria-hidden="true">
+            ✉
+          </span>
+
+          <div>
+
+            <small>
+              Email
+            </small>
+
+            <strong id="detailsEmail">
+              -
+            </strong>
+
+          </div>
+
+        </div>
+
+
+        <!-- FAVORITE -->
+        <div class="details-row">
+
+          <span aria-hidden="true">
+            ★
+          </span>
+
+          <div>
+
+            <small>
+              Status
+            </small>
+
+            <strong id="detailsFavorite">
+              Not Favorite
+            </strong>
+
+          </div>
+
+        </div>
+
+      </div>
+
+
+      <!-- DETAILS ACTIONS -->
+      <div class="details-actions">
+
+        <button
+          class="cancel-button"
+          id="detailsEdit"
+          type="button"
+        >
+          ✎ Edit
+        </button>
+
+        <button
+          class="delete-confirm"
+          id="detailsDelete"
+          type="button"
+        >
+          × Delete
+        </button>
+
+      </div>
+
+    </div>
+
+  </div>
+
+
+  <!--
+    One-time reset:
+    removes the old saved collapsed state that was
+    created by the previous sidebar implementation.
+  -->
+  <script>
+    if (
+      !localStorage.getItem(
+        "phonebookSidebarInitialized"
+      )
+    ) {
+      localStorage.removeItem(
+        "phonebookSidebarCollapsed"
+      );
+
+      localStorage.setItem(
+        "phonebookSidebarInitialized",
+        "1"
+      );
+    }
+  </script>
+
+  <script src="/script.js"></script>
+
+</body>
+</html>
