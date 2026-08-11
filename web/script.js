@@ -1,14 +1,36 @@
 /* ============================================================
-   PHONEBOOK FRONTEND
+   PHONEBOOK - GITHUB PAGES VERSION
+   No C++ server required.
+   Data is stored in browser localStorage.
+   Compatible with the current index.html and style.css.
+   ============================================================ */
+
+"use strict";
+
+/* ============================================================
+   STATE
    ============================================================ */
 
 let contacts = [];
 let editingPhone = null;
 let deletingPhone = null;
 let detailsContact = null;
+let currentView = "all";
 
 let searchTimer = null;
 let toastTimer = null;
+
+
+/* ============================================================
+   LOCAL STORAGE KEYS
+   ============================================================ */
+
+const CONTACTS_KEY = "phonebookContacts";
+const PHOTOS_KEY = "phonebookContactPhotos";
+const FAVORITES_KEY = "phonebookFavorites";
+const THEME_KEY = "phonebookTheme";
+const BACKGROUND_KEY = "phonebookBackground";
+const SIDEBAR_KEY = "phonebookSidebarCollapsed";
 
 
 /* ============================================================
@@ -48,7 +70,6 @@ const searchInput =
 const resultText =
     document.getElementById("resultText");
 
-
 const modalOverlay =
     document.getElementById("modalOverlay");
 
@@ -57,7 +78,6 @@ const deleteOverlay =
 
 const contactForm =
     document.getElementById("contactForm");
-
 
 const modalTitle =
     document.getElementById("modalTitle");
@@ -83,20 +103,17 @@ const formMessage =
 const deleteText =
     document.getElementById("deleteText");
 
-
 const photoInput =
     document.getElementById("photoInput");
 
 const photoPreview =
     document.getElementById("photoPreview");
 
-
 const themeButton =
     document.getElementById("themeButton");
 
 const backgroundSelect =
     document.getElementById("backgroundSelect");
-
 
 const favoriteNav =
     document.getElementById("favoriteNav");
@@ -108,125 +125,124 @@ const favoriteNavCount =
     document.getElementById("favoriteNavCount");
 
 const favoriteContactsCount =
-    document.getElementById(
-        "favoriteContactsCount"
-    );
-
-
-/* ============================================================
-   DETAILS POPUP
-   ============================================================ */
+    document.getElementById("favoriteContactsCount");
 
 const detailsOverlay =
-    document.getElementById(
-        "detailsOverlay"
-    );
+    document.getElementById("detailsOverlay");
 
 const closeDetails =
-    document.getElementById(
-        "closeDetails"
-    );
+    document.getElementById("closeDetails");
 
 const detailsPhoto =
-    document.getElementById(
-        "detailsPhoto"
-    );
+    document.getElementById("detailsPhoto");
 
 const detailsName =
-    document.getElementById(
-        "detailsName"
-    );
+    document.getElementById("detailsName");
 
 const detailsPhone =
-    document.getElementById(
-        "detailsPhone"
-    );
+    document.getElementById("detailsPhone");
 
 const detailsEmail =
-    document.getElementById(
-        "detailsEmail"
-    );
+    document.getElementById("detailsEmail");
 
 const detailsFavorite =
-    document.getElementById(
-        "detailsFavorite"
-    );
+    document.getElementById("detailsFavorite");
 
 const detailsEdit =
-    document.getElementById(
-        "detailsEdit"
-    );
+    document.getElementById("detailsEdit");
 
 const detailsDelete =
-    document.getElementById(
-        "detailsDelete"
-    );
+    document.getElementById("detailsDelete");
+
+const confirmDelete =
+    document.getElementById("confirmDelete");
+
+const sortButton =
+    document.getElementById("sortButton");
 
 
 /* ============================================================
-   LOCAL STORAGE
+   FAVORITES
    ============================================================ */
 
-const PHOTOS_KEY =
-    "phonebookContactPhotos";
-
-const FAVORITES_KEY =
-    "phonebookFavorites";
-
-const THEME_KEY =
-    "phonebookTheme";
-
-const BACKGROUND_KEY =
-    "phonebookBackground";
-
-const SIDEBAR_KEY =
-    "phonebookSidebarCollapsed";
+let favoritePhones = new Set(
+    loadJSON(
+        FAVORITES_KEY,
+        []
+    )
+);
 
 
-let favoritePhones =
-    new Set(
-        JSON.parse(
-            localStorage.getItem(
-                FAVORITES_KEY
-            ) || "[]"
+/* ============================================================
+   GENERIC STORAGE HELPERS
+   ============================================================ */
+
+function loadJSON(key, fallback) {
+    try {
+        const value =
+            localStorage.getItem(key);
+
+        if (!value) {
+            return fallback;
+        }
+
+        return JSON.parse(value);
+    }
+    catch (error) {
+        return fallback;
+    }
+}
+
+
+function saveContacts() {
+    localStorage.setItem(
+        CONTACTS_KEY,
+        JSON.stringify(contacts)
+    );
+}
+
+
+function saveFavorites() {
+    localStorage.setItem(
+        FAVORITES_KEY,
+        JSON.stringify(
+            [...favoritePhones]
         )
     );
-
-
-let currentView = "all";
+}
 
 
 /* ============================================================
-   UTILITY
+   PHONE NORMALIZATION
    ============================================================ */
 
-function normalizePhone(phone)
-{
+function normalizePhone(phone) {
     return String(phone || "")
         .replace(/\D/g, "");
 }
 
 
-function getInitials(name)
-{
+/* ============================================================
+   INITIALS
+   ============================================================ */
+
+function getInitials(name) {
+
     const parts =
         String(name || "")
             .trim()
             .split(/\s+/)
             .filter(Boolean);
 
-
-    if (parts.length === 0)
+    if (parts.length === 0) {
         return "?";
+    }
 
-
-    if (parts.length === 1)
-    {
+    if (parts.length === 1) {
         return parts[0]
             .substring(0, 2)
             .toUpperCase();
     }
-
 
     return (
         parts[0][0] +
@@ -239,25 +255,17 @@ function getInitials(name)
    CONTACT PHOTOS
    ============================================================ */
 
-function loadContactPhotos()
-{
-    try
-    {
-        return JSON.parse(
-            localStorage.getItem(
-                PHOTOS_KEY
-            ) || "{}"
-        );
-    }
-    catch
-    {
-        return {};
-    }
+function loadContactPhotos() {
+
+    return loadJSON(
+        PHOTOS_KEY,
+        {}
+    );
 }
 
 
-function saveContactPhotos(photos)
-{
+function saveContactPhotos(photos) {
+
     localStorage.setItem(
         PHOTOS_KEY,
         JSON.stringify(photos)
@@ -265,8 +273,8 @@ function saveContactPhotos(photos)
 }
 
 
-function getContactPhoto(phone)
-{
+function getContactPhoto(phone) {
+
     const photos =
         loadContactPhotos();
 
@@ -280,26 +288,21 @@ function getContactPhoto(phone)
 
 function setContactPhoto(
     phone,
-    dataUrl
-)
-{
+    dataURL
+) {
+
     const photos =
         loadContactPhotos();
 
     const key =
         normalizePhone(phone);
 
-
-    if (dataUrl)
-    {
-        photos[key] =
-            dataUrl;
+    if (dataURL) {
+        photos[key] = dataURL;
     }
-    else
-    {
+    else {
         delete photos[key];
     }
-
 
     saveContactPhotos(photos);
 }
@@ -308,8 +311,8 @@ function setContactPhoto(
 function moveContactPhoto(
     oldPhone,
     newPhone
-)
-{
+) {
+
     const photos =
         loadContactPhotos();
 
@@ -319,23 +322,20 @@ function moveContactPhoto(
     const newKey =
         normalizePhone(newPhone);
 
+    if (photos[oldKey]) {
 
-    if (photos[oldKey])
-    {
         photos[newKey] =
             photos[oldKey];
 
         delete photos[oldKey];
 
-        saveContactPhotos(
-            photos
-        );
+        saveContactPhotos(photos);
     }
 }
 
 
-function removeContactPhoto(phone)
-{
+function removeContactPhoto(phone) {
+
     const photos =
         loadContactPhotos();
 
@@ -343,34 +343,29 @@ function removeContactPhoto(phone)
         normalizePhone(phone)
     ];
 
-    saveContactPhotos(
-        photos
-    );
+    saveContactPhotos(photos);
 }
 
 
 /* ============================================================
-   RESIZE PHOTO
+   PHOTO RESIZE
    ============================================================ */
 
-function resizePhoto(file)
-{
+function resizePhoto(file) {
+
     return new Promise(
-        (resolve, reject) =>
-        {
-            if (!file)
-            {
+        (resolve, reject) => {
+
+            if (!file) {
                 resolve("");
                 return;
             }
-
 
             if (
                 !file.type.startsWith(
                     "image/"
                 )
-            )
-            {
+            ) {
                 reject(
                     new Error(
                         "Please select an image file."
@@ -380,21 +375,18 @@ function resizePhoto(file)
                 return;
             }
 
-
             const reader =
                 new FileReader();
 
-
             reader.onload =
-                function(event)
-                {
+                function(event) {
+
                     const image =
                         new Image();
 
-
                     image.onload =
-                        function()
-                        {
+                        function() {
+
                             const maxSize =
                                 300;
 
@@ -404,14 +396,13 @@ function resizePhoto(file)
                             let height =
                                 image.height;
 
-
                             if (
                                 width >
-                                    height &&
+                                height &&
                                 width >
-                                    maxSize
-                            )
-                            {
+                                maxSize
+                            ) {
+
                                 height =
                                     Math.round(
                                         height *
@@ -422,13 +413,14 @@ function resizePhoto(file)
                                 width =
                                     maxSize;
                             }
+
                             else if (
                                 height >=
-                                    width &&
+                                width &&
                                 height >
-                                    maxSize
-                            )
-                            {
+                                maxSize
+                            ) {
+
                                 width =
                                     Math.round(
                                         width *
@@ -440,12 +432,10 @@ function resizePhoto(file)
                                     maxSize;
                             }
 
-
                             const canvas =
                                 document.createElement(
                                     "canvas"
                                 );
-
 
                             canvas.width =
                                 width;
@@ -453,12 +443,10 @@ function resizePhoto(file)
                             canvas.height =
                                 height;
 
-
                             const context =
                                 canvas.getContext(
                                     "2d"
                                 );
-
 
                             context.drawImage(
                                 image,
@@ -468,7 +456,6 @@ function resizePhoto(file)
                                 height
                             );
 
-
                             resolve(
                                 canvas.toDataURL(
                                     "image/jpeg",
@@ -477,10 +464,9 @@ function resizePhoto(file)
                             );
                         };
 
-
                     image.onerror =
-                        function()
-                        {
+                        function() {
+
                             reject(
                                 new Error(
                                     "Could not read the selected image."
@@ -488,22 +474,19 @@ function resizePhoto(file)
                             );
                         };
 
-
                     image.src =
                         event.target.result;
                 };
 
-
             reader.onerror =
-                function()
-                {
+                function() {
+
                     reject(
                         new Error(
                             "Could not read the selected image."
                         )
                     );
                 };
-
 
             reader.readAsDataURL(file);
         }
@@ -515,56 +498,46 @@ function resizePhoto(file)
    PHOTO PREVIEW
    ============================================================ */
 
-function clearPhotoPreview()
-{
-    if (!photoPreview)
+function clearPhotoPreview() {
+
+    if (!photoPreview) {
         return;
+    }
 
-
-    photoPreview.innerHTML =
-        "";
+    photoPreview.innerHTML = "";
 
     photoPreview.style.display =
         "none";
 }
 
 
-function showPhotoPreview(src)
-{
-    if (!photoPreview)
+function showPhotoPreview(dataURL) {
+
+    if (!photoPreview) {
         return;
+    }
 
+    photoPreview.innerHTML = "";
 
-    photoPreview.innerHTML =
-        "";
+    if (!dataURL) {
 
-
-    if (!src)
-    {
         photoPreview.style.display =
             "none";
 
         return;
     }
 
-
     const image =
-        document.createElement(
-            "img"
-        );
+        document.createElement("img");
 
-
-    image.src =
-        src;
+    image.src = dataURL;
 
     image.alt =
-        "Profile photo";
-
+        "Profile photo preview";
 
     photoPreview.appendChild(
         image
     );
-
 
     photoPreview.style.display =
         "block";
@@ -572,280 +545,261 @@ function showPhotoPreview(src)
 
 
 /* ============================================================
-   TOAST
+   LOAD CONTACTS
    ============================================================ */
 
-function showToast(
-    message,
-    icon = "✓"
-)
-{
-    const toast =
-        document.getElementById(
-            "toast"
-        );
+function loadContacts() {
 
-    const toastIcon =
-        document.getElementById(
-            "toastIcon"
-        );
-
-    const toastMessage =
-        document.getElementById(
-            "toastMessage"
-        );
-
-
-    if (
-        !toast ||
-        !toastMessage
-    )
-    {
-        return;
+    if (loading) {
+        loading.style.display =
+            "block";
     }
 
+    contacts =
+        loadJSON(
+            CONTACTS_KEY,
+            []
+        );
 
-    if (toastIcon)
-    {
-        toastIcon.textContent =
-            icon;
+    if (!Array.isArray(contacts)) {
+        contacts = [];
     }
 
-
-    toastMessage.textContent =
-        message;
-
-
-    toast.classList.add(
-        "show"
-    );
-
-
-    clearTimeout(
-        toastTimer
-    );
-
-
-    toastTimer =
-        setTimeout(
-            function()
-            {
-                toast.classList.remove(
-                    "show"
-                );
-            },
-            3000
-        );
-}
-
-
-/* ============================================================
-   FORM ERROR
-   ============================================================ */
-
-function showFormError(message)
-{
-    if (!formMessage)
-        return;
-
-
-    formMessage.textContent =
-        message;
-
-    formMessage.className =
-        "form-message error";
-}
-
-
-/* ============================================================
-   FAVORITES
-   ============================================================ */
-
-function saveFavorites()
-{
-    localStorage.setItem(
-        FAVORITES_KEY,
-        JSON.stringify(
-            [...favoritePhones]
-        )
-    );
-}
-
-
-function isFavorite(phone)
-{
-    return favoritePhones.has(
-        normalizePhone(phone)
-    );
-}
-
-
-function updateFavoriteCount()
-{
-    const count =
+    contacts =
         contacts.filter(
             contact =>
-                isFavorite(
-                    contact.phone
-                )
-        ).length;
-
-
-    if (favoriteContactsCount)
-    {
-        favoriteContactsCount.textContent =
-            count;
-    }
-
-
-    if (favoriteNavCount)
-    {
-        favoriteNavCount.textContent =
-            count;
-    }
-}
-
-
-function moveFavorite(
-    oldPhone,
-    newPhone
-)
-{
-    const oldKey =
-        normalizePhone(
-            oldPhone
+                contact &&
+                contact.name &&
+                contact.phone
         );
 
-    const newKey =
-        normalizePhone(
-            newPhone
-        );
-
-
-    if (oldKey === newKey)
-        return;
-
-
-    if (
-        favoritePhones.has(
-            oldKey
-        )
-    )
-    {
-        favoritePhones.delete(
-            oldKey
-        );
-
-        favoritePhones.add(
-            newKey
-        );
-
-        saveFavorites();
-    }
-}
-
-
-function toggleFavorite(phone)
-{
-    const key =
-        normalizePhone(phone);
-
-
-    if (
-        favoritePhones.has(
-            key
-        )
-    )
-    {
-        favoritePhones.delete(
-            key
-        );
-
-        showToast(
-            "Removed from favorites.",
-            "☆"
-        );
-    }
-    else
-    {
-        favoritePhones.add(
-            key
-        );
-
-        showToast(
-            "Added to favorites.",
-            "★"
-        );
-    }
-
-
-    saveFavorites();
+    sortContactsInternal();
 
     updateFavoriteCount();
 
     renderCurrentView();
+
+    if (loading) {
+        loading.style.display =
+            "none";
+    }
 }
 
 
 /* ============================================================
-   LOAD CONTACTS
+   SORT CONTACTS
    ============================================================ */
 
-async function loadContacts()
-{
-    try
-    {
-        if (loading)
-        {
-            loading.style.display =
-                "block";
-        }
+function sortContactsInternal() {
+
+    contacts.sort(
+        (a, b) =>
+            String(a.name)
+                .localeCompare(
+                    String(b.name),
+                    undefined,
+                    {
+                        sensitivity: "base"
+                    }
+                )
+    );
+}
 
 
-        if (contactGrid)
-        {
-            contactGrid.innerHTML =
-                "";
-        }
+function sortContactsAZ(
+    showMessage = true
+) {
 
+    sortContactsInternal();
 
-        const response =
-            await fetch(
-                "/api/contacts"
-            );
+    saveContacts();
 
+    renderCurrentView();
 
-        if (!response.ok)
-        {
-            throw new Error(
-                "Could not load contacts."
-            );
-        }
+    if (showMessage) {
 
-
-        contacts =
-            await response.json();
-
-
-        updateFavoriteCount();
-
-        renderCurrentView();
-    }
-    catch (error)
-    {
         showToast(
-            error.message,
-            "!"
+            "Contacts sorted A → Z",
+            "✓"
         );
     }
-    finally
-    {
-        if (loading)
-        {
-            loading.style.display =
-                "none";
+}
+
+
+/* ============================================================
+   BINARY SEARCH
+   ============================================================ */
+
+function binarySearchByName(
+    target
+) {
+
+    const search =
+        String(target || "")
+            .trim()
+            .toLowerCase();
+
+    let left = 0;
+
+    let right =
+        contacts.length - 1;
+
+    while (left <= right) {
+
+        const middle =
+            Math.floor(
+                (left + right) / 2
+            );
+
+        const current =
+            String(
+                contacts[middle].name
+            ).toLowerCase();
+
+        if (current === search) {
+            return middle;
+        }
+
+        if (current < search) {
+            left =
+                middle + 1;
+        }
+        else {
+            right =
+                middle - 1;
         }
     }
+
+    return -1;
+}
+
+
+/* ============================================================
+   SEARCH
+   ============================================================ */
+
+function performSearch() {
+
+    const query =
+        searchInput
+            ? searchInput.value.trim()
+            : "";
+
+    if (!query) {
+
+        renderCurrentView();
+
+        return;
+    }
+
+    const lowerQuery =
+        query.toLowerCase();
+
+    const normalizedQuery =
+        normalizePhone(query);
+
+    const results = [];
+
+    /*
+       EXACT NAME SEARCH
+       Uses binary search because
+       contacts are sorted by name.
+    */
+
+    const exactIndex =
+        binarySearchByName(
+            query
+        );
+
+    if (exactIndex !== -1) {
+
+        results.push(
+            contacts[exactIndex]
+        );
+    }
+
+    /*
+       PHONE SEARCH + PARTIAL SEARCH
+    */
+
+    contacts.forEach(
+        contact => {
+
+            const name =
+                String(
+                    contact.name || ""
+                ).toLowerCase();
+
+            const phone =
+                String(
+                    contact.phone || ""
+                );
+
+            const email =
+                String(
+                    contact.email || ""
+                ).toLowerCase();
+
+            const nameMatch =
+                name.includes(
+                    lowerQuery
+                );
+
+            const phoneMatch =
+                normalizedQuery &&
+                normalizePhone(
+                    phone
+                ).includes(
+                    normalizedQuery
+                );
+
+            const emailMatch =
+                email.includes(
+                    lowerQuery
+                );
+
+            if (
+                nameMatch ||
+                phoneMatch ||
+                emailMatch
+            ) {
+
+                const exists =
+                    results.some(
+                        item =>
+                            normalizePhone(
+                                item.phone
+                            ) ===
+                            normalizePhone(
+                                contact.phone
+                            )
+                    );
+
+                if (!exists) {
+                    results.push(
+                        contact
+                    );
+                }
+            }
+        }
+    );
+
+    results.sort(
+        (a, b) =>
+            String(a.name)
+                .localeCompare(
+                    String(b.name),
+                    undefined,
+                    {
+                        sensitivity: "base"
+                    }
+                )
+    );
+
+    renderContacts(
+        results,
+        true
+    );
 }
 
 
@@ -853,65 +807,64 @@ async function loadContacts()
    RENDER CONTACTS
    ============================================================ */
 
-function renderContacts(list)
-{
-    if (!contactGrid)
+function renderContacts(
+    list,
+    isSearchResult = false
+) {
+
+    if (!contactGrid) {
         return;
+    }
 
+    contactGrid.innerHTML = "";
 
-    contactGrid.innerHTML =
-        "";
+    if (totalContacts) {
 
-
-    if (totalContacts)
-    {
         totalContacts.textContent =
             contacts.length;
     }
 
-
     if (
         !list ||
         list.length === 0
-    )
-    {
-        if (emptyState)
-        {
+    ) {
+
+        if (emptyState) {
             emptyState.style.display =
                 "block";
         }
 
+        if (resultText) {
 
-        if (resultText)
-        {
-            resultText.textContent =
-                "No contacts found.";
+            if (isSearchResult) {
+                resultText.textContent =
+                    "No contacts found.";
+            }
+            else if (
+                currentView ===
+                "favorites"
+            ) {
+                resultText.textContent =
+                    "No favorite contacts.";
+            }
+            else {
+                resultText.textContent =
+                    "No contacts found.";
+            }
         }
-
 
         return;
     }
 
-
-    if (emptyState)
-    {
+    if (emptyState) {
         emptyState.style.display =
             "none";
     }
 
+    if (resultText) {
 
-    if (resultText)
-    {
-        if (
-            list.length ===
-            contacts.length
-        )
-        {
-            resultText.textContent =
-                "Your saved contacts";
-        }
-        else
-        {
+        if (isSearchResult) {
+
             resultText.textContent =
                 `${list.length} search result${
                     list.length === 1
@@ -919,12 +872,30 @@ function renderContacts(list)
                         : "s"
                 }`;
         }
+
+        else if (
+            currentView ===
+            "favorites"
+        ) {
+
+            resultText.textContent =
+                `${list.length} favorite contact${
+                    list.length === 1
+                        ? ""
+                        : "s"
+                }`;
+        }
+
+        else {
+
+            resultText.textContent =
+                "Your saved contacts";
+        }
     }
 
-
     list.forEach(
-        contact =>
-        {
+        contact => {
+
             contactGrid.appendChild(
                 createContactCard(
                     contact
@@ -935,25 +906,43 @@ function renderContacts(list)
 }
 
 
-function renderCurrentView()
-{
+function renderCurrentView() {
+
+    const query =
+        searchInput
+            ? searchInput.value.trim()
+            : "";
+
+    /*
+       If searching, use local search.
+    */
+
+    if (query) {
+
+        performSearch();
+
+        return;
+    }
+
     if (
         currentView ===
         "favorites"
-    )
-    {
-        renderContacts(
+    ) {
+
+        const favorites =
             contacts.filter(
                 contact =>
                     isFavorite(
                         contact.phone
                     )
-            )
+            );
+
+        renderContacts(
+            favorites
         );
 
         return;
     }
-
 
     renderContacts(
         contacts
@@ -962,52 +951,46 @@ function renderCurrentView()
 
 
 /* ============================================================
-   CONTACT CARD
+   CREATE CONTACT CARD
    ============================================================ */
 
 function createContactCard(
     contact
-)
-{
+) {
+
     const card =
         document.createElement(
             "div"
         );
 
-
     card.className =
         "contact-card";
 
-
     card.style.cursor =
         "pointer";
-
 
     if (
         isFavorite(
             contact.phone
         )
-    )
-    {
+    ) {
+
         card.classList.add(
             "is-favorite"
         );
     }
 
-
     card.addEventListener(
         "click",
-        function(event)
-        {
+        function(event) {
+
             if (
                 event.target.closest(
                     "button"
                 )
-            )
-            {
+            ) {
                 return;
             }
-
 
             openDetailsModal(
                 contact
@@ -1023,43 +1006,37 @@ function createContactCard(
             "div"
         );
 
-
     avatar.className =
         "avatar";
-
 
     const photo =
         getContactPhoto(
             contact.phone
         );
 
+    if (photo) {
 
-    if (photo)
-    {
         const image =
             document.createElement(
                 "img"
             );
 
-
         image.src =
             photo;
-
 
         image.alt =
             `${contact.name} profile photo`;
 
-
         image.className =
             "avatar-photo";
-
 
         avatar.appendChild(
             image
         );
     }
-    else
-    {
+
+    else {
+
         avatar.textContent =
             getInitials(
                 contact.name
@@ -1074,49 +1051,39 @@ function createContactCard(
             "div"
         );
 
-
     info.className =
         "contact-info";
-
 
     const name =
         document.createElement(
             "div"
         );
 
-
     name.className =
         "contact-name";
 
-
     name.textContent =
         contact.name;
-
 
     const phone =
         document.createElement(
             "div"
         );
 
-
     phone.className =
         "contact-detail";
-
 
     phone.textContent =
         "☎ " +
         contact.phone;
-
 
     const email =
         document.createElement(
             "div"
         );
 
-
     email.className =
         "contact-detail";
-
 
     email.textContent =
         "✉ " +
@@ -1124,7 +1091,6 @@ function createContactCard(
             contact.email ||
             "N/A"
         );
-
 
     info.appendChild(
         name
@@ -1146,26 +1112,22 @@ function createContactCard(
             "div"
         );
 
-
     actions.className =
         "contact-actions";
 
 
-    /* FAVORITE */
+    /* FAVORITE BUTTON */
 
     const favoriteButton =
         document.createElement(
             "button"
         );
 
-
     favoriteButton.className =
         "icon-button favorite-button";
 
-
     favoriteButton.type =
         "button";
-
 
     favoriteButton.textContent =
         isFavorite(
@@ -1174,7 +1136,6 @@ function createContactCard(
             ? "★"
             : "☆";
 
-
     favoriteButton.title =
         isFavorite(
             contact.phone
@@ -1182,11 +1143,12 @@ function createContactCard(
             ? "Remove from favorites"
             : "Add to favorites";
 
-
     favoriteButton.addEventListener(
         "click",
-        function()
-        {
+        function(event) {
+
+            event.stopPropagation();
+
             toggleFavorite(
                 contact.phone
             );
@@ -1194,34 +1156,31 @@ function createContactCard(
     );
 
 
-    /* EDIT */
+    /* EDIT BUTTON */
 
     const editButton =
         document.createElement(
             "button"
         );
 
-
     editButton.className =
         "icon-button";
-
 
     editButton.type =
         "button";
 
-
     editButton.textContent =
         "✎";
-
 
     editButton.title =
         "Edit contact";
 
-
     editButton.addEventListener(
         "click",
-        function()
-        {
+        function(event) {
+
+            event.stopPropagation();
+
             openEditModal(
                 contact
             );
@@ -1229,34 +1188,31 @@ function createContactCard(
     );
 
 
-    /* DELETE */
+    /* DELETE BUTTON */
 
     const deleteButton =
         document.createElement(
             "button"
         );
 
-
     deleteButton.className =
         "icon-button delete";
-
 
     deleteButton.type =
         "button";
 
-
     deleteButton.textContent =
         "×";
-
 
     deleteButton.title =
         "Delete contact";
 
-
     deleteButton.addEventListener(
         "click",
-        function()
-        {
+        function(event) {
+
+            event.stopPropagation();
+
             openDeleteModal(
                 contact
             );
@@ -1289,201 +1245,171 @@ function createContactCard(
         actions
     );
 
-
     return card;
 }
 
 
 /* ============================================================
-   SEARCH
+   FAVORITES
    ============================================================ */
 
-async function performSearch()
-{
-    const query =
-        searchInput
-            ? searchInput.value.trim()
-            : "";
+function isFavorite(phone) {
+
+    return favoritePhones.has(
+        normalizePhone(phone)
+    );
+}
 
 
-    if (!query)
-    {
-        renderCurrentView();
-        return;
-    }
+function updateFavoriteCount() {
 
-
-    const normalized =
-        normalizePhone(
-            query
-        );
-
-
-    /*
-       PHONE SEARCH
-    */
-
-    if (
-        normalized &&
-        /^\d+$/.test(
-            normalized
-        )
-    )
-    {
-        const results =
-            contacts.filter(
-                contact =>
-                    normalizePhone(
-                        contact.phone
-                    ).includes(
-                        normalized
-                    )
-            );
-
-
-        renderContacts(
-            results
-        );
-
-
-        return;
-    }
-
-
-    /*
-       NAME SEARCH
-    */
-
-    try
-    {
-        const response =
-            await fetch(
-                "/api/search?name=" +
-                encodeURIComponent(
-                    query
+    const count =
+        contacts.filter(
+            contact =>
+                isFavorite(
+                    contact.phone
                 )
-            );
+        ).length;
 
+    if (favoriteContactsCount) {
 
-        if (!response.ok)
-        {
-            throw new Error(
-                "Search failed."
-            );
-        }
-
-
-        const results =
-            await response.json();
-
-
-        renderContacts(
-            results
-        );
+        favoriteContactsCount.textContent =
+            count;
     }
-    catch (error)
-    {
-        showToast(
-            error.message,
-            "!"
-        );
+
+    if (favoriteNavCount) {
+
+        favoriteNavCount.textContent =
+            count;
     }
 }
 
 
-if (searchInput)
-{
-    searchInput.addEventListener(
-        "input",
-        function()
-        {
-            clearTimeout(
-                searchTimer
-            );
+function moveFavorite(
+    oldPhone,
+    newPhone
+) {
+
+    const oldKey =
+        normalizePhone(oldPhone);
+
+    const newKey =
+        normalizePhone(newPhone);
+
+    if (
+        oldKey ===
+        newKey
+    ) {
+        return;
+    }
+
+    if (
+        favoritePhones.has(
+            oldKey
+        )
+    ) {
+
+        favoritePhones.delete(
+            oldKey
+        );
+
+        favoritePhones.add(
+            newKey
+        );
+
+        saveFavorites();
+    }
+}
 
 
-            currentView =
-                "all";
+function toggleFavorite(phone) {
 
+    const key =
+        normalizePhone(phone);
 
-            if (favoriteNav)
-            {
-                favoriteNav.classList.remove(
-                    "active"
-                );
-            }
+    if (
+        favoritePhones.has(
+            key
+        )
+    ) {
 
+        favoritePhones.delete(
+            key
+        );
 
-            if (contactsNav)
-            {
-                contactsNav.classList.add(
-                    "active"
-                );
-            }
+        showToast(
+            "Removed from favorites.",
+            "☆"
+        );
+    }
 
+    else {
 
-            searchTimer =
-                setTimeout(
-                    performSearch,
-                    250
-                );
-        }
-    );
+        favoritePhones.add(
+            key
+        );
+
+        showToast(
+            "Added to favorites.",
+            "★"
+        );
+    }
+
+    saveFavorites();
+
+    updateFavoriteCount();
+
+    renderCurrentView();
 }
 
 
 /* ============================================================
-   ADD CONTACT
+   ADD MODAL
    ============================================================ */
 
-function openAddModal()
-{
-    editingPhone =
-        null;
+function openAddModal() {
 
+    editingPhone = null;
 
-    modalTitle.textContent =
-        "Add Contact";
-
-
-    contactForm.reset();
-
-
-    if (photoInput)
-    {
-        photoInput.value =
-            "";
+    if (modalTitle) {
+        modalTitle.textContent =
+            "Add Contact";
     }
 
+    if (contactForm) {
+        contactForm.reset();
+    }
+
+    if (photoInput) {
+        photoInput.value = "";
+    }
 
     clearPhotoPreview();
 
+    if (oldPhoneInput) {
+        oldPhoneInput.value = "";
+    }
 
-    oldPhoneInput.value =
-        "";
+    clearFormMessage();
 
+    if (saveButton) {
+        saveButton.textContent =
+            "Save Contact";
+    }
 
-    formMessage.textContent =
-        "";
-
-
-    formMessage.className =
-        "form-message";
-
-
-    saveButton.textContent =
-        "Save Contact";
-
-
-    modalOverlay.classList.add(
-        "show"
-    );
-
+    if (modalOverlay) {
+        modalOverlay.classList.add(
+            "show"
+        );
+    }
 
     setTimeout(
-        function()
-        {
-            nameInput.focus();
+        function() {
+
+            if (nameInput) {
+                nameInput.focus();
+            }
+
         },
         100
     );
@@ -1491,48 +1417,51 @@ function openAddModal()
 
 
 /* ============================================================
-   EDIT CONTACT
+   EDIT MODAL
    ============================================================ */
 
 function openEditModal(
     contact
-)
-{
+) {
+
     editingPhone =
         contact.phone;
 
-
-    modalTitle.textContent =
-        "Edit Contact";
-
-
-    nameInput.value =
-        contact.name;
-
-
-    phoneInput.value =
-        contact.phone;
-
-
-    emailInput.value =
-        contact.email === "N/A"
-            ? ""
-            : (
-                contact.email ||
-                ""
-            );
-
-
-    oldPhoneInput.value =
-        contact.phone;
-
-
-    if (photoInput)
-    {
-        photoInput.value =
-            "";
+    if (modalTitle) {
+        modalTitle.textContent =
+            "Edit Contact";
     }
 
+    if (nameInput) {
+        nameInput.value =
+            contact.name;
+    }
+
+    if (phoneInput) {
+        phoneInput.value =
+            contact.phone;
+    }
+
+    if (emailInput) {
+
+        emailInput.value =
+            contact.email === "N/A"
+                ? ""
+                : (
+                    contact.email ||
+                    ""
+                );
+    }
+
+    if (oldPhoneInput) {
+
+        oldPhoneInput.value =
+            contact.phone;
+    }
+
+    if (photoInput) {
+        photoInput.value = "";
+    }
 
     showPhotoPreview(
         getContactPhoto(
@@ -1540,28 +1469,27 @@ function openEditModal(
         )
     );
 
+    clearFormMessage();
 
-    formMessage.textContent =
-        "";
+    if (saveButton) {
+        saveButton.textContent =
+            "Update Contact";
+    }
 
+    if (modalOverlay) {
 
-    formMessage.className =
-        "form-message";
-
-
-    saveButton.textContent =
-        "Update Contact";
-
-
-    modalOverlay.classList.add(
-        "show"
-    );
-
+        modalOverlay.classList.add(
+            "show"
+        );
+    }
 
     setTimeout(
-        function()
-        {
-            nameInput.focus();
+        function() {
+
+            if (nameInput) {
+                nameInput.focus();
+            }
+
         },
         100
     );
@@ -1569,50 +1497,79 @@ function openEditModal(
 
 
 /* ============================================================
-   CLOSE CONTACT MODAL
+   CLOSE ADD/EDIT MODAL
    ============================================================ */
 
-function closeModal()
-{
-    modalOverlay.classList.remove(
-        "show"
-    );
+function closeModal() {
 
+    if (modalOverlay) {
 
-    editingPhone =
-        null;
+        modalOverlay.classList.remove(
+            "show"
+        );
+    }
+
+    editingPhone = null;
 }
 
 
 /* ============================================================
-   DUPLICATE DETECTION
+   FORM MESSAGE
+   ============================================================ */
+
+function clearFormMessage() {
+
+    if (!formMessage) {
+        return;
+    }
+
+    formMessage.textContent = "";
+
+    formMessage.className =
+        "form-message";
+}
+
+
+function showFormError(
+    message
+) {
+
+    if (!formMessage) {
+        return;
+    }
+
+    formMessage.textContent =
+        message;
+
+    formMessage.className =
+        "form-message error";
+}
+
+
+/* ============================================================
+   DUPLICATE PHONE CHECK
    ============================================================ */
 
 function getDuplicateContact(
     phone,
     excludePhone = null
-)
-{
-    const target =
-        normalizePhone(
-            phone
-        );
+) {
 
+    const target =
+        normalizePhone(phone);
 
     const excluded =
         normalizePhone(
             excludePhone
         );
 
-
     return contacts.find(
-        contact =>
-        {
+        contact => {
+
             const value =
                 normalizePhone(
                     contact.phone
                 );
-
 
             return (
                 value === target &&
@@ -1624,29 +1581,31 @@ function getDuplicateContact(
 
 
 /* ============================================================
-   SAVE / UPDATE
+   SAVE / UPDATE CONTACT
    ============================================================ */
 
-if (contactForm)
-{
+if (contactForm) {
+
     contactForm.addEventListener(
         "submit",
-        async function(event)
-        {
+        async function(event) {
+
             event.preventDefault();
 
-
             const name =
-                nameInput.value.trim();
-
+                nameInput
+                    ? nameInput.value.trim()
+                    : "";
 
             const phone =
-                phoneInput.value.trim();
-
+                phoneInput
+                    ? phoneInput.value.trim()
+                    : "";
 
             const email =
-                emailInput.value.trim();
-
+                emailInput
+                    ? emailInput.value.trim()
+                    : "";
 
             const photoFile =
                 photoInput &&
@@ -1655,8 +1614,8 @@ if (contactForm)
                     : null;
 
 
-            if (!name)
-            {
+            if (!name) {
+
                 showFormError(
                     "Please enter a name."
                 );
@@ -1665,8 +1624,8 @@ if (contactForm)
             }
 
 
-            if (!phone)
-            {
+            if (!phone) {
+
                 showFormError(
                     "Please enter a phone number."
                 );
@@ -1681,32 +1640,27 @@ if (contactForm)
                     editingPhone
                 );
 
+            if (duplicate) {
 
-            if (duplicate)
-            {
                 showFormError(
                     `A contact with phone number ${duplicate.phone} already exists.`
                 );
-
 
                 showToast(
                     "Duplicate phone number.",
                     "!"
                 );
 
-
                 return;
             }
 
 
-            try
-            {
-                let photoData =
-                    "";
+            try {
 
+                let photoData = "";
 
-                if (photoFile)
-                {
+                if (photoFile) {
+
                     photoData =
                         await resizePhoto(
                             photoFile
@@ -1714,133 +1668,125 @@ if (contactForm)
                 }
 
 
-                const formData =
-                    new URLSearchParams();
+                /*
+                   UPDATE EXISTING CONTACT
+                */
+
+                if (editingPhone) {
+
+                    const index =
+                        contacts.findIndex(
+                            contact =>
+                                normalizePhone(
+                                    contact.phone
+                                ) ===
+                                normalizePhone(
+                                    editingPhone
+                                )
+                        );
+
+                    if (index === -1) {
+
+                        showFormError(
+                            "Contact not found."
+                        );
+
+                        return;
+                    }
 
 
-                formData.append(
-                    "name",
-                    name
-                );
+                    const oldPhone =
+                        contacts[index].phone;
 
 
-                formData.append(
-                    "phone",
-                    phone
-                );
+                    contacts[index] = {
+
+                        name: name,
+
+                        phone: phone,
+
+                        email:
+                            email ||
+                            "N/A"
+                    };
 
 
-                formData.append(
-                    "email",
-                    email
-                );
+                    /*
+                       Move photo if phone changed.
+                    */
+
+                    if (
+                        normalizePhone(
+                            oldPhone
+                        ) !==
+                        normalizePhone(
+                            phone
+                        )
+                    ) {
+
+                        moveContactPhoto(
+                            oldPhone,
+                            phone
+                        );
+
+                        moveFavorite(
+                            oldPhone,
+                            phone
+                        );
+                    }
 
 
-                let url;
+                    /*
+                       Replace photo if a
+                       new one was selected.
+                    */
+
+                    if (photoData) {
+
+                        setContactPhoto(
+                            phone,
+                            photoData
+                        );
+                    }
 
 
-                if (editingPhone)
-                {
-                    url =
-                        "/api/update";
+                    sortContactsInternal();
 
+                    saveContacts();
 
-                    formData.append(
-                        "oldPhone",
-                        editingPhone
-                    );
-                }
-                else
-                {
-                    url =
-                        "/api/add";
-                }
+                    closeModal();
 
+                    updateFavoriteCount();
 
-                const response =
-                    await fetch(
-                        url,
-                        {
-                            method:
-                                "POST",
+                    renderCurrentView();
 
-                            headers:
-                            {
-                                "Content-Type":
-                                    "application/x-www-form-urlencoded"
-                            },
-
-                            body:
-                                formData.toString()
-                        }
-                    );
-
-
-                const result =
-                    await response.json();
-
-
-                if (!result.success)
-                {
-                    showFormError(
-                        result.message
+                    showToast(
+                        "Contact updated successfully.",
+                        "✓"
                     );
 
                     return;
                 }
 
 
-                /* PHOTO */
+                /*
+                   ADD NEW CONTACT
+                */
 
-                if (editingPhone)
-                {
-                    if (photoData)
-                    {
-                        setContactPhoto(
-                            phone,
-                            photoData
-                        );
+                contacts.push({
 
+                    name: name,
 
-                        if (
-                            normalizePhone(
-                                editingPhone
-                            ) !==
-                            normalizePhone(
-                                phone
-                            )
-                        )
-                        {
-                            removeContactPhoto(
-                                editingPhone
-                            );
-                        }
-                    }
-                    else if (
-                        normalizePhone(
-                            editingPhone
-                        ) !==
-                        normalizePhone(
-                            phone
-                        )
-                    )
-                    {
-                        moveContactPhoto(
-                            editingPhone,
-                            phone
-                        );
-                    }
+                    phone: phone,
+
+                    email:
+                        email ||
+                        "N/A"
+                });
 
 
-                    /* FAVORITE */
+                if (photoData) {
 
-                    moveFavorite(
-                        editingPhone,
-                        phone
-                    );
-                }
-                else if (photoData)
-                {
                     setContactPhoto(
                         phone,
                         photoData
@@ -1848,35 +1794,30 @@ if (contactForm)
                 }
 
 
+                sortContactsInternal();
+
+                saveContacts();
+
                 closeModal();
 
+                updateFavoriteCount();
 
-                await loadContacts();
-
+                renderCurrentView();
 
                 showToast(
-                    result.message,
+                    "Contact added successfully.",
                     "✓"
                 );
             }
-            catch (error)
-            {
-                if (
-                    error.message ===
-                    "Please select an image file."
-                )
-                {
-                    showFormError(
-                        error.message
-                    );
-                }
-                else
-                {
-                    showFormError(
-                        "Could not connect to server."
-                    );
-                }
+
+            catch (error) {
+
+                showFormError(
+                    error.message ||
+                    "Could not save contact."
+                );
             }
+
         }
     );
 }
@@ -1886,44 +1827,40 @@ if (contactForm)
    PHOTO INPUT
    ============================================================ */
 
-if (photoInput)
-{
+if (photoInput) {
+
     photoInput.addEventListener(
         "change",
-        async function()
-        {
+        async function() {
+
             const file =
                 photoInput.files[0];
 
+            if (!file) {
 
-            if (!file)
-            {
                 clearPhotoPreview();
 
                 return;
             }
 
+            try {
 
-            try
-            {
                 const preview =
                     await resizePhoto(
                         file
                     );
 
-
                 showPhotoPreview(
                     preview
                 );
             }
-            catch (error)
-            {
+
+            catch (error) {
+
                 photoInput.value =
                     "";
 
-
                 clearPhotoPreview();
-
 
                 showFormError(
                     error.message
@@ -1935,197 +1872,355 @@ if (photoInput)
 
 
 /* ============================================================
-   DELETE
+   DELETE MODAL
    ============================================================ */
 
 function openDeleteModal(
     contact
-)
-{
+) {
+
     deletingPhone =
         contact.phone;
 
+    if (deleteText) {
 
-    deleteText.textContent =
-        `Are you sure you want to delete ${contact.name}?`;
+        deleteText.textContent =
+            `Are you sure you want to delete ${contact.name}?`;
+    }
 
+    if (deleteOverlay) {
 
-    deleteOverlay.classList.add(
-        "show"
-    );
-}
-
-
-function closeDeleteModal()
-{
-    deleteOverlay.classList.remove(
-        "show"
-    );
-
-
-    deletingPhone =
-        null;
-}
-
-
-const confirmDelete =
-    document.getElementById(
-        "confirmDelete"
-    );
-
-
-if (confirmDelete)
-{
-    confirmDelete.addEventListener(
-        "click",
-        async function()
-        {
-            if (!deletingPhone)
-                return;
-
-
-            const phoneToDelete =
-                deletingPhone;
-
-
-            const formData =
-                new URLSearchParams();
-
-
-            formData.append(
-                "phone",
-                phoneToDelete
-            );
-
-
-            try
-            {
-                const response =
-                    await fetch(
-                        "/api/delete",
-                        {
-                            method:
-                                "POST",
-
-                            headers:
-                            {
-                                "Content-Type":
-                                    "application/x-www-form-urlencoded"
-                            },
-
-                            body:
-                                formData.toString()
-                        }
-                    );
-
-
-                const result =
-                    await response.json();
-
-
-                closeDeleteModal();
-
-
-                if (!result.success)
-                {
-                    showToast(
-                        result.message,
-                        "!"
-                    );
-
-                    return;
-                }
-
-
-                removeContactPhoto(
-                    phoneToDelete
-                );
-
-
-                favoritePhones.delete(
-                    normalizePhone(
-                        phoneToDelete
-                    )
-                );
-
-
-                saveFavorites();
-
-
-                await loadContacts();
-
-
-                showToast(
-                    result.message,
-                    "✓"
-                );
-            }
-            catch
-            {
-                showToast(
-                    "Could not connect to server.",
-                    "!"
-                );
-            }
-        }
-    );
-}
-
-
-/* ============================================================
-   SORT
-   ============================================================ */
-
-function sortContactsAZ(
-    showMessage = true
-)
-{
-    contacts.sort(
-        (a, b) =>
-            a.name.localeCompare(
-                b.name,
-                undefined,
-                {
-                    sensitivity:
-                        "base"
-                }
-            )
-    );
-
-
-    renderCurrentView();
-
-
-    if (showMessage)
-    {
-        showToast(
-            "Contacts sorted A → Z",
-            "✓"
+        deleteOverlay.classList.add(
+            "show"
         );
     }
 }
 
 
-const sortButton =
-    document.getElementById(
-        "sortButton"
-    );
+function closeDeleteModal() {
+
+    if (deleteOverlay) {
+
+        deleteOverlay.classList.remove(
+            "show"
+        );
+    }
+
+    deletingPhone = null;
+}
 
 
-if (sortButton)
-{
-    sortButton.addEventListener(
+/* ============================================================
+   DELETE CONTACT
+   ============================================================ */
+
+if (confirmDelete) {
+
+    confirmDelete.addEventListener(
         "click",
-        function()
-        {
-            sortContactsAZ();
+        function() {
+
+            if (!deletingPhone) {
+                return;
+            }
+
+            const phoneToDelete =
+                deletingPhone;
+
+
+            const index =
+                contacts.findIndex(
+                    contact =>
+                        normalizePhone(
+                            contact.phone
+                        ) ===
+                        normalizePhone(
+                            phoneToDelete
+                        )
+                );
+
+
+            if (index === -1) {
+
+                closeDeleteModal();
+
+                showToast(
+                    "Contact not found.",
+                    "!"
+                );
+
+                return;
+            }
+
+
+            contacts.splice(
+                index,
+                1
+            );
+
+
+            removeContactPhoto(
+                phoneToDelete
+            );
+
+
+            favoritePhones.delete(
+                normalizePhone(
+                    phoneToDelete
+                )
+            );
+
+
+            saveContacts();
+
+            saveFavorites();
+
+            updateFavoriteCount();
+
+            closeDeleteModal();
+
+            renderCurrentView();
+
+            showToast(
+                "Contact deleted successfully.",
+                "✓"
+            );
         }
     );
 }
 
 
 /* ============================================================
-   BUTTON EVENTS
+   CONTACT DETAILS
+   ============================================================ */
+
+function openDetailsModal(
+    contact
+) {
+
+    if (!detailsOverlay) {
+        return;
+    }
+
+    detailsContact =
+        contact;
+
+
+    if (detailsName) {
+
+        detailsName.textContent =
+            contact.name;
+    }
+
+
+    if (detailsPhone) {
+
+        detailsPhone.textContent =
+            contact.phone;
+    }
+
+
+    if (detailsEmail) {
+
+        detailsEmail.textContent =
+            contact.email ||
+            "N/A";
+    }
+
+
+    if (detailsFavorite) {
+
+        detailsFavorite.textContent =
+            isFavorite(
+                contact.phone
+            )
+                ? "Favorite"
+                : "Not Favorite";
+    }
+
+
+    if (detailsPhoto) {
+
+        detailsPhoto.innerHTML = "";
+
+        const photo =
+            getContactPhoto(
+                contact.phone
+            );
+
+        if (photo) {
+
+            const image =
+                document.createElement(
+                    "img"
+                );
+
+            image.src =
+                photo;
+
+            image.alt =
+                `${contact.name} profile photo`;
+
+            image.style.width =
+                "100%";
+
+            image.style.height =
+                "100%";
+
+            image.style.objectFit =
+                "cover";
+
+            image.style.borderRadius =
+                "inherit";
+
+            detailsPhoto.appendChild(
+                image
+            );
+        }
+
+        else {
+
+            detailsPhoto.textContent =
+                getInitials(
+                    contact.name
+                );
+        }
+    }
+
+
+    detailsOverlay.classList.add(
+        "show"
+    );
+}
+
+
+function closeDetailsModal() {
+
+    if (detailsOverlay) {
+
+        detailsOverlay.classList.remove(
+            "show"
+        );
+    }
+
+    detailsContact = null;
+}
+
+
+/* ============================================================
+   DETAILS EDIT
+   ============================================================ */
+
+if (detailsEdit) {
+
+    detailsEdit.addEventListener(
+        "click",
+        function() {
+
+            if (!detailsContact) {
+                return;
+            }
+
+            const contact =
+                detailsContact;
+
+            closeDetailsModal();
+
+            openEditModal(
+                contact
+            );
+        }
+    );
+}
+
+
+/* ============================================================
+   DETAILS DELETE
+   ============================================================ */
+
+if (detailsDelete) {
+
+    detailsDelete.addEventListener(
+        "click",
+        function() {
+
+            if (!detailsContact) {
+                return;
+            }
+
+            const contact =
+                detailsContact;
+
+            closeDetailsModal();
+
+            openDeleteModal(
+                contact
+            );
+        }
+    );
+}
+
+
+/* ============================================================
+   CLOSE DETAILS
+   ============================================================ */
+
+if (closeDetails) {
+
+    closeDetails.addEventListener(
+        "click",
+        closeDetailsModal
+    );
+}
+
+
+/* ============================================================
+   SEARCH INPUT
+   ============================================================ */
+
+if (searchInput) {
+
+    searchInput.addEventListener(
+        "input",
+        function() {
+
+            clearTimeout(
+                searchTimer
+            );
+
+
+            currentView =
+                "all";
+
+
+            if (favoriteNav) {
+
+                favoriteNav.classList.remove(
+                    "active"
+                );
+            }
+
+
+            if (contactsNav) {
+
+                contactsNav.classList.add(
+                    "active"
+                );
+            }
+
+
+            searchTimer =
+                setTimeout(
+                    performSearch,
+                    150
+                );
+        }
+    );
+}
+
+
+/* ============================================================
+   ADD BUTTONS
    ============================================================ */
 
 document.getElementById(
@@ -2151,6 +2246,10 @@ document.getElementById(
     openAddModal
 );
 
+
+/* ============================================================
+   CLOSE BUTTONS
+   ============================================================ */
 
 document.getElementById(
     "closeModal"
@@ -2180,18 +2279,18 @@ document.getElementById(
    FAVORITES NAVIGATION
    ============================================================ */
 
-if (favoriteNav)
-{
+if (favoriteNav) {
+
     favoriteNav.addEventListener(
         "click",
-        function()
-        {
+        function() {
+
             currentView =
                 "favorites";
 
 
-            if (searchInput)
-            {
+            if (searchInput) {
+
                 searchInput.value =
                     "";
             }
@@ -2202,8 +2301,8 @@ if (favoriteNav)
             );
 
 
-            if (contactsNav)
-            {
+            if (contactsNav) {
+
                 contactsNav.classList.remove(
                     "active"
                 );
@@ -2220,25 +2319,25 @@ if (favoriteNav)
    CONTACTS NAVIGATION
    ============================================================ */
 
-if (contactsNav)
-{
+if (contactsNav) {
+
     contactsNav.addEventListener(
         "click",
-        function()
-        {
+        function() {
+
             currentView =
                 "all";
 
 
-            if (searchInput)
-            {
+            if (searchInput) {
+
                 searchInput.value =
                     "";
             }
 
 
-            if (favoriteNav)
-            {
+            if (favoriteNav) {
+
                 favoriteNav.classList.remove(
                     "active"
                 );
@@ -2260,26 +2359,23 @@ if (contactsNav)
    FAVORITES STAT CARD
    ============================================================ */
 
-if (favoriteContactsCount)
-{
+if (favoriteContactsCount) {
+
     const favoriteCard =
         favoriteContactsCount.closest(
             ".stat-card"
         );
 
+    if (favoriteCard) {
 
-    if (favoriteCard)
-    {
         favoriteCard.style.cursor =
             "pointer";
 
-
         favoriteCard.addEventListener(
             "click",
-            function()
-            {
-                if (favoriteNav)
-                {
+            function() {
+
+                if (favoriteNav) {
                     favoriteNav.click();
                 }
             }
@@ -2292,26 +2388,23 @@ if (favoriteContactsCount)
    TOTAL CONTACTS STAT CARD
    ============================================================ */
 
-if (totalContacts)
-{
+if (totalContacts) {
+
     const totalCard =
         totalContacts.closest(
             ".stat-card"
         );
 
+    if (totalCard) {
 
-    if (totalCard)
-    {
         totalCard.style.cursor =
             "pointer";
 
-
         totalCard.addEventListener(
             "click",
-            function()
-            {
-                if (contactsNav)
-                {
+            function() {
+
+                if (contactsNav) {
                     contactsNav.click();
                 }
             }
@@ -2321,27 +2414,33 @@ if (totalContacts)
 
 
 /* ============================================================
+   SORT BUTTON
+   ============================================================ */
+
+if (sortButton) {
+
+    sortButton.addEventListener(
+        "click",
+        function() {
+
+            sortContactsAZ();
+        }
+    );
+}
+
+
+/* ============================================================
    SIDEBAR
    ============================================================ */
 
-/*
-   IMPORTANT:
+function setHamburgerIcon() {
 
-   The hamburger button ALWAYS stays as ☰.
-
-   We do NOT change it to × when the
-   sidebar is collapsed.
-*/
-
-function setHamburgerIcon()
-{
-    if (!sidebarToggle)
+    if (!sidebarToggle) {
         return;
-
+    }
 
     sidebarToggle.innerHTML =
         "☰";
-
 
     sidebarToggle.setAttribute(
         "aria-label",
@@ -2352,10 +2451,11 @@ function setHamburgerIcon()
 
 function setSidebarCollapsed(
     collapsed
-)
-{
-    if (!app)
+) {
+
+    if (!app) {
         return;
+    }
 
 
     app.classList.toggle(
@@ -2370,22 +2470,17 @@ function setSidebarCollapsed(
     );
 
 
-    /*
-       Keep hamburger icon permanently.
-    */
-
     setHamburgerIcon();
 
 
-    if (sidebarToggle)
-    {
+    if (sidebarToggle) {
+
         sidebarToggle.setAttribute(
             "aria-expanded",
             collapsed
                 ? "false"
                 : "true"
         );
-
 
         sidebarToggle.setAttribute(
             "title",
@@ -2405,17 +2500,16 @@ function setSidebarCollapsed(
 }
 
 
-function toggleSidebar()
-{
-    if (!app)
-        return;
+function toggleSidebar() {
 
+    if (!app) {
+        return;
+    }
 
     const collapsed =
         app.classList.contains(
             "sidebar-collapsed"
         );
-
 
     setSidebarCollapsed(
         !collapsed
@@ -2423,14 +2517,9 @@ function toggleSidebar()
 }
 
 
-if (sidebarToggle)
-{
-    /*
-       Force hamburger icon immediately.
-    */
+if (sidebarToggle) {
 
     setHamburgerIcon();
-
 
     sidebarToggle.addEventListener(
         "click",
@@ -2443,14 +2532,14 @@ if (sidebarToggle)
    SEARCH SIDEBAR BUTTON
    ============================================================ */
 
-if (searchNav)
-{
+if (searchNav) {
+
     searchNav.addEventListener(
         "click",
-        function()
-        {
-            if (searchInput)
-            {
+        function() {
+
+            if (searchInput) {
+
                 searchInput.focus();
 
                 searchInput.select();
@@ -2464,12 +2553,12 @@ if (searchNav)
    SORT SIDEBAR BUTTON
    ============================================================ */
 
-if (sortNav)
-{
+if (sortNav) {
+
     sortNav.addEventListener(
         "click",
-        function()
-        {
+        function() {
+
             sortContactsAZ();
         }
     );
@@ -2480,29 +2569,23 @@ if (sortNav)
    STATISTICS SIDEBAR BUTTON
    ============================================================ */
 
-if (statsNav)
-{
+if (statsNav) {
+
     statsNav.addEventListener(
         "click",
-        function()
-        {
+        function() {
+
             const stats =
                 document.querySelector(
                     ".stats"
                 );
 
+            if (stats) {
 
-            if (stats)
-            {
-                stats.scrollIntoView(
-                    {
-                        behavior:
-                            "smooth",
-
-                        block:
-                            "start"
-                    }
-                );
+                stats.scrollIntoView({
+                    behavior: "smooth",
+                    block: "start"
+                });
             }
         }
     );
@@ -2513,22 +2596,20 @@ if (statsNav)
    DARK MODE
    ============================================================ */
 
-function updateThemeButton()
-{
-    if (!themeButton)
-        return;
+function updateThemeButton() {
 
+    if (!themeButton) {
+        return;
+    }
 
     const dark =
         document.body.dataset.theme ===
         "dark";
 
-
     themeButton.textContent =
         dark
             ? "☀ Light"
             : "☾ Dark";
-
 
     themeButton.title =
         dark
@@ -2537,31 +2618,28 @@ function updateThemeButton()
 }
 
 
-function toggleTheme()
-{
+function toggleTheme() {
+
     const next =
         document.body.dataset.theme ===
         "dark"
             ? "light"
             : "dark";
 
-
     document.body.dataset.theme =
         next;
-
 
     localStorage.setItem(
         THEME_KEY,
         next
     );
 
-
     updateThemeButton();
 }
 
 
-if (themeButton)
-{
+if (themeButton) {
+
     themeButton.addEventListener(
         "click",
         toggleTheme
@@ -2575,11 +2653,10 @@ if (themeButton)
 
 function changeBackground(
     value
-)
-{
+) {
+
     document.body.dataset.background =
         value;
-
 
     localStorage.setItem(
         BACKGROUND_KEY,
@@ -2588,12 +2665,12 @@ function changeBackground(
 }
 
 
-if (backgroundSelect)
-{
+if (backgroundSelect) {
+
     backgroundSelect.addEventListener(
         "change",
-        function(event)
-        {
+        function(event) {
+
             changeBackground(
                 event.target.value
             );
@@ -2602,241 +2679,133 @@ if (backgroundSelect)
 }
 
 
-function applySavedSettings()
-{
+/* ============================================================
+   APPLY SAVED SETTINGS
+   ============================================================ */
+
+function applySavedSettings() {
+
     const theme =
         localStorage.getItem(
             THEME_KEY
         ) || "light";
-
 
     const background =
         localStorage.getItem(
             BACKGROUND_KEY
         ) || "default";
 
-
     document.body.dataset.theme =
         theme;
-
 
     document.body.dataset.background =
         background;
 
 
-    if (backgroundSelect)
-    {
+    if (backgroundSelect) {
+
         backgroundSelect.value =
             background;
     }
 
 
     updateThemeButton();
-}
 
 
-/* ============================================================
-   CONTACT DETAILS POPUP
-   ============================================================ */
+    const collapsed =
+        localStorage.getItem(
+            SIDEBAR_KEY
+        ) === "1";
 
-function openDetailsModal(
-    contact
-)
-{
-    if (!detailsOverlay)
-        return;
-
-
-    detailsContact =
-        contact;
-
-
-    detailsName.textContent =
-        contact.name;
-
-
-    detailsPhone.textContent =
-        contact.phone;
-
-
-    detailsEmail.textContent =
-        contact.email ||
-        "N/A";
-
-
-    if (
-        isFavorite(
-            contact.phone
-        )
-    )
-    {
-        detailsFavorite.textContent =
-            "★ Favorite";
-    }
-    else
-    {
-        detailsFavorite.textContent =
-            "☆ Not Favorite";
-    }
-
-
-    const photo =
-        getContactPhoto(
-            contact.phone
-        );
-
-
-    detailsPhoto.innerHTML =
-        "";
-
-
-    if (photo)
-    {
-        const image =
-            document.createElement(
-                "img"
-            );
-
-
-        image.src =
-            photo;
-
-
-        image.alt =
-            `${contact.name} profile photo`;
-
-
-        detailsPhoto.appendChild(
-            image
-        );
-    }
-    else
-    {
-        detailsPhoto.textContent =
-            getInitials(
-                contact.name
-            );
-    }
-
-
-    detailsOverlay.classList.add(
-        "show"
-    );
-}
-
-
-function closeDetailsModal()
-{
-    if (!detailsOverlay)
-        return;
-
-
-    detailsOverlay.classList.remove(
-        "show"
-    );
-
-
-    detailsContact =
-        null;
-}
-
-
-if (closeDetails)
-{
-    closeDetails.addEventListener(
-        "click",
-        closeDetailsModal
-    );
-}
-
-
-if (detailsOverlay)
-{
-    detailsOverlay.addEventListener(
-        "click",
-        function(event)
-        {
-            if (
-                event.target ===
-                detailsOverlay
-            )
-            {
-                closeDetailsModal();
-            }
-        }
-    );
-}
-
-
-/* DETAILS EDIT */
-
-if (detailsEdit)
-{
-    detailsEdit.addEventListener(
-        "click",
-        function()
-        {
-            if (!detailsContact)
-                return;
-
-
-            const contact =
-                detailsContact;
-
-
-            closeDetailsModal();
-
-
-            openEditModal(
-                contact
-            );
-        }
-    );
-}
-
-
-/* DETAILS DELETE */
-
-if (detailsDelete)
-{
-    detailsDelete.addEventListener(
-        "click",
-        function()
-        {
-            if (!detailsContact)
-                return;
-
-
-            const contact =
-                detailsContact;
-
-
-            closeDetailsModal();
-
-
-            openDeleteModal(
-                contact
-            );
-        }
+    setSidebarCollapsed(
+        collapsed
     );
 }
 
 
 /* ============================================================
-   OVERLAY CLOSE
+   TOAST
    ============================================================ */
 
-if (modalOverlay)
-{
+function showToast(
+    message,
+    icon = "✓"
+) {
+
+    const toast =
+        document.getElementById(
+            "toast"
+        );
+
+    const toastIcon =
+        document.getElementById(
+            "toastIcon"
+        );
+
+    const toastMessage =
+        document.getElementById(
+            "toastMessage"
+        );
+
+
+    if (!toast) {
+        return;
+    }
+
+
+    if (toastIcon) {
+
+        toastIcon.textContent =
+            icon;
+    }
+
+
+    if (toastMessage) {
+
+        toastMessage.textContent =
+            message;
+    }
+
+
+    toast.classList.add(
+        "show"
+    );
+
+
+    clearTimeout(
+        toastTimer
+    );
+
+
+    toastTimer =
+        setTimeout(
+            function() {
+
+                toast.classList.remove(
+                    "show"
+                );
+
+            },
+            2500
+        );
+}
+
+
+/* ============================================================
+   MODAL BACKDROP CLICK
+   ============================================================ */
+
+if (modalOverlay) {
+
     modalOverlay.addEventListener(
         "click",
-        function(event)
-        {
+        function(event) {
+
             if (
                 event.target ===
                 modalOverlay
-            )
-            {
+            ) {
+
                 closeModal();
             }
         }
@@ -2844,17 +2813,17 @@ if (modalOverlay)
 }
 
 
-if (deleteOverlay)
-{
+if (deleteOverlay) {
+
     deleteOverlay.addEventListener(
         "click",
-        function(event)
-        {
+        function(event) {
+
             if (
                 event.target ===
                 deleteOverlay
-            )
-            {
+            ) {
+
                 closeDeleteModal();
             }
         }
@@ -2862,22 +2831,38 @@ if (deleteOverlay)
 }
 
 
+if (detailsOverlay) {
+
+    detailsOverlay.addEventListener(
+        "click",
+        function(event) {
+
+            if (
+                event.target ===
+                detailsOverlay
+            ) {
+
+                closeDetailsModal();
+            }
+        }
+    );
+}
+
+
 /* ============================================================
-   ESCAPE KEY
+   ESC KEY
    ============================================================ */
 
 document.addEventListener(
     "keydown",
-    function(event)
-    {
+    function(event) {
+
         if (
             event.key !==
             "Escape"
-        )
-        {
+        ) {
             return;
         }
-
 
         closeModal();
 
@@ -2892,37 +2877,10 @@ document.addEventListener(
    START APPLICATION
    ============================================================ */
 
-const savedSidebarState =
-    localStorage.getItem(
-        SIDEBAR_KEY
-    );
-
-
-/*
-   FIXED SIDEBAR STARTUP
-
-   Previously the code automatically collapsed
-   the sidebar when:
-
-       savedSidebarState === null
-       AND
-       window.innerWidth <= 800
-
-   That caused the sidebar to start closed on
-   smaller screens.
-
-   Now:
-       "1" = collapsed
-       anything else = open
-*/
-
-setSidebarCollapsed(
-    savedSidebarState === "1"
-);
-
-
 applySavedSettings();
+
+loadContacts();
 
 updateFavoriteCount();
 
-loadContacts();
+setHamburgerIcon();
