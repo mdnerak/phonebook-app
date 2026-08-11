@@ -1,16 +1,34 @@
+#ifdef _WIN32
 #include <winsock2.h>
 #include <ws2tcpip.h>
+#pragma comment(lib, "ws2_32.lib")
+#else
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <unistd.h>
+#endif
 
 #include <algorithm>
 #include <cctype>
 #include <cstdio>
+#include <cstdlib>
 #include <fstream>
 #include <iostream>
 #include <sstream>
 #include <string>
 #include <vector>
 
-#pragma comment(lib, "ws2_32.lib")
+
+#ifdef _WIN32
+using SocketType = SOCKET;
+#else
+using SocketType = int;
+#define INVALID_SOCKET (-1)
+#define SOCKET_ERROR (-1)
+#define closesocket close
+#endif
 
 using namespace std;
 
@@ -18,7 +36,21 @@ using namespace std;
                         CONFIGURATION
    ============================================================ */
 
-const int PORT = 8081;
+int getPort()
+{
+    const char* envPort = getenv("PORT");
+
+    if (envPort != nullptr && *envPort != '\0')
+    {
+        int port = atoi(envPort);
+
+        if (port > 0 && port <= 65535)
+            return port;
+    }
+
+    return 8081;
+}
+
 const string DATA_FILE = "contacts.txt";
 
 
@@ -910,7 +942,7 @@ string handleDelete(const string& body)
                     HTTP REQUEST HANDLER
    ============================================================ */
 
-void handleClient(SOCKET client)
+void handleClient(SocketType client)
 {
     char buffer[8192];
 
@@ -1190,6 +1222,7 @@ int main()
                         START WINSOCK
        ======================================================== */
 
+#ifdef _WIN32
     WSADATA wsaData;
 
     int result =
@@ -1203,13 +1236,16 @@ int main()
         cerr << "WSAStartup failed.\n";
         return 1;
     }
+#endif
 
+
+    const int PORT = getPort();
 
     /* ========================================================
                         CREATE SOCKET
        ======================================================== */
 
-    SOCKET serverSocket =
+    SocketType serverSocket =
         socket(
             AF_INET,
             SOCK_STREAM,
@@ -1220,7 +1256,9 @@ int main()
     {
         cerr << "Could not create socket.\n";
 
+#ifdef _WIN32
         WSACleanup();
+#endif
 
         return 1;
     }
@@ -1236,7 +1274,7 @@ int main()
         AF_INET;
 
     serverAddress.sin_addr.s_addr =
-        inet_addr("127.0.0.1");
+        htonl(INADDR_ANY);
 
     serverAddress.sin_port =
         htons(PORT);
@@ -1262,7 +1300,9 @@ int main()
 
         closesocket(serverSocket);
 
+#ifdef _WIN32
         WSACleanup();
+#endif
 
         return 1;
     }
@@ -1283,7 +1323,9 @@ int main()
 
         closesocket(serverSocket);
 
+#ifdef _WIN32
         WSACleanup();
+#endif
 
         return 1;
     }
@@ -1307,10 +1349,15 @@ int main()
     {
         sockaddr_in clientAddress{};
 
+#ifdef _WIN32
         int clientSize =
             sizeof(clientAddress);
+#else
+        socklen_t clientSize =
+            sizeof(clientAddress);
+#endif
 
-        SOCKET client =
+        SocketType client =
             accept(
                 serverSocket,
                 reinterpret_cast<sockaddr*>(
@@ -1330,7 +1377,9 @@ int main()
 
     closesocket(serverSocket);
 
+#ifdef _WIN32
     WSACleanup();
+#endif
 
     return 0;
 }
